@@ -74,6 +74,9 @@ export default function App() {
     setError(null);
     try {
       const res = await fetch('/api/tracker');
+      if (!res.ok) {
+        throw new Error('API server not responding');
+      }
       const json = await res.json();
       if (json.success && json.data) {
         setData(json.data);
@@ -85,8 +88,75 @@ export default function App() {
         throw new Error(json.error || 'Failed to retrieve vacation tracking details');
       }
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'An error occurred while fetching tracker data.');
+      console.warn('Backend API not reachable. Running on frontend simulator mode:', err.message);
+      
+      // Client-side simulator fallback
+      const mockDestinations = [
+        { from: "JFK", to: "CDG", name: "Paris", nights: 7 },
+        { from: "JFK", to: "NRT", name: "Tokyo", nights: 10 },
+        { from: "JFK", to: "LHR", name: "London", nights: 5 }
+      ];
+      
+      const fallbackData: Record<string, any> = {};
+      
+      for (const dest of mockDestinations) {
+        const { from, to, name, nights } = dest;
+        const keyName = `${from}-${to}-${nights}`;
+        
+        const dates: string[] = [];
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setMonth(startDate.getMonth() + 6);
+        
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+          dates.push(currentDate.toISOString().split('T')[0]);
+          currentDate.setDate(currentDate.getDate() + 7); // weekly
+        }
+        
+        const flightPrices = dates.map((outboundDateStr) => {
+          const outboundDate = new Date(outboundDateStr);
+          const returnDate = new Date(outboundDate);
+          returnDate.setDate(returnDate.getDate() + nights);
+          const returnDateStr = returnDate.toISOString().split('T')[0];
+          
+          const dayOfYear = (outboundDate.getTime() - new Date(outboundDate.getFullYear(), 0, 1).getTime()) / (1000 * 60 * 60 * 24);
+          const seasonality = Math.sin((dayOfYear - 80) * 2 * Math.PI / 365) * 150 + Math.sin((dayOfYear - 330) * 2 * Math.PI / 365) * 80;
+          const randomFactor = Math.floor(Math.random() * 40) - 20;
+          const distanceMultiplier = to === 'NRT' ? 950 : to === 'CDG' ? 650 : 450;
+          const mockPrice = Math.round(distanceMultiplier + seasonality + randomFactor);
+          
+          return {
+            date: outboundDateStr,
+            returnDate: returnDateStr,
+            price: mockPrice,
+            isMock: true,
+            link: `https://www.google.com/travel/flights?q=Flights%20to%20${to}%20from%20${from}%20on%20${outboundDateStr}%20through%20${returnDateStr}`
+          };
+        });
+        
+        fallbackData[keyName] = {
+          destination: name,
+          from,
+          to,
+          nights,
+          prices: flightPrices,
+          highlights: [
+            `Historic landmarks in ${name}`,
+            `Scenic tours and sightseeing spots`,
+            `Highly-rated local dining options`,
+            `Shopping and main city walks`
+          ],
+          lastUpdated: new Date().toISOString(),
+          warning: 'Running in frontend simulation mode. Local API server is not running.'
+        };
+      }
+      
+      setData(fallbackData);
+      const keys = Object.keys(fallbackData);
+      if (keys.length > 0) {
+        setSelectedKey(keys[0]);
+      }
     } finally {
       setLoading(false);
     }
