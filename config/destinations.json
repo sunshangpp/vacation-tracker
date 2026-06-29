@@ -1,0 +1,5 @@
+[
+  { "from": "JFK", "to": "CDG", "name": "Paris", "nights": 7, "granularity": "weekly" },
+  { "from": "JFK", "to": "NRT", "name": "Tokyo", "nights": 10, "granularity": "weekly" },
+  { "from": "JFK", "to": "LHR", "name": "London", "nights": 5, "granularity": "weekly" }
+]
