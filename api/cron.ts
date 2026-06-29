@@ -23,9 +23,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // 1. Authenticate the Cron request in production
   const authHeader = req.headers.authorization;
   const isProd = process.env.NODE_ENV === 'production';
+  const queryKey = req.query.key;
   
-  if (isProd && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized cron trigger' });
+  if (isProd && authHeader !== `Bearer ${process.env.CRON_SECRET}` && (!queryKey || queryKey !== process.env.SERPAPI_KEY)) {
+    return res.status(401).json({ 
+      error: 'Unauthorized cron trigger. Pass your SerpApi key as a query parameter (?key=YOUR_KEY) to trigger manually in the browser.' 
+    });
   }
 
   try {
